@@ -9,6 +9,7 @@ import csv
 import argparse
 import json
 import os
+import numpy as np
 from collections import namedtuple
 from itertools import combinations
 from itertools import chain
@@ -127,7 +128,8 @@ SupportRecord = namedtuple( # pylint: disable=C0103
 RelationRecord = namedtuple( # pylint: disable=C0103
     'RelationRecord', SupportRecord._fields + ('ordered_statistics',))
 OrderedStatistic = namedtuple( # pylint: disable=C0103
-    'OrderedStatistic', ('items_base', 'items_add', 'confidence', 'lift',))
+    'OrderedStatistic', ('items_base', 'items_add', 'confidence', 'lift',
+                         'leverage', 'conviction',))
 
 
 ################################################################################
@@ -216,8 +218,17 @@ def gen_ordered_statistics(transaction_manager, record):
             confidence = (
                 record.support / transaction_manager.calc_support(items_base))
             lift = confidence / transaction_manager.calc_support(items_add)
+            leverage = (record.support
+                        - (transaction_manager.calc_support(items_base)
+                           * transaction_manager.calc_support(items_add)))
+            try:
+                conviction = ((1 - transaction_manager.calc_support(items_add))
+                              / (1 - confidence)
+            except ZeroDivisionError:
+                conviction = np.inf
             yield OrderedStatistic(
-                frozenset(items_base), frozenset(items_add), confidence, lift)
+                frozenset(items_base), frozenset(items_add), confidence, lift,
+                leverage, conviction)
 
 
 def filter_ordered_statistics(ordered_statistics, **kwargs):
@@ -411,6 +422,7 @@ def dump_as_two_item_tsv(record, output_file):
         output_file.write('{0}\t{1}\t{2:.8f}\t{3:.8f}\t{4:.8f}{5}'.format(
             list(ordered_stats.items_base)[0], list(ordered_stats.items_add)[0],
             record.support, ordered_stats.confidence, ordered_stats.lift,
+            ordered_stats.leverage, orderd_stats.conviction,
             os.linesep))
 
 
