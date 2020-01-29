@@ -223,7 +223,7 @@ def gen_ordered_statistics(transaction_manager, record):
                            * transaction_manager.calc_support(items_add)))
             try:
                 conviction = ((1 - transaction_manager.calc_support(items_add))
-                              / (1 - confidence)
+                              / (1 - confidence))
             except ZeroDivisionError:
                 conviction = np.inf
             yield OrderedStatistic(
